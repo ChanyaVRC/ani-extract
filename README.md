@@ -1,5 +1,7 @@
 # ani-extract
 
+[![CI](https://github.com/ChanyaVRC/ani-extract/actions/workflows/ci.yml/badge.svg)](https://github.com/ChanyaVRC/ani-extract/actions/workflows/ci.yml)
+
 A command-line tool that extracts frame images from Windows animated cursors (`.ani`).
 
 An `.ani` file is a RIFF/ACON container whose `LIST/fram` section holds multiple `.cur` / `.ico`
