@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .ani import AniFile, parse_ani
-from .animation import save_apng, save_gif, save_webp
+from .animation import normalize_canvas, save_apng, save_gif, save_webp
 from .icons import IconContainer, IconError, open_entry, parse_icon_container
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -22,7 +22,7 @@ _APNG_FILENAME = "animation.png"
 _WEBP_FILENAME = "animation.webp"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class ExtractOptions:
     """Options controlling extraction behavior."""
 
@@ -191,24 +191,27 @@ def extract(source: Path, output_directory: Path, options: ExtractOptions) -> Ex
             result.written_files.append(step_path)
             result.png_count += 1
 
-    if options.write_gif or options.write_apng or options.write_webp:
+    animation_outputs = [
+        (filename, saver)
+        for enabled, filename, saver in (
+            (options.write_gif, _GIF_FILENAME, save_gif),
+            (options.write_apng, _APNG_FILENAME, save_apng),
+            (options.write_webp, _WEBP_FILENAME, save_webp),
+        )
+        if enabled
+    ]
+
+    if animation_outputs:
         if not ordered:
             result.warnings.append("No frames usable for animation.")
         else:
-            if options.write_gif:
-                gif_path = output_directory / _GIF_FILENAME
-                save_gif(ordered, ordered_durations, gif_path)
-                result.written_files.append(gif_path)
-
-            if options.write_apng:
-                apng_path = output_directory / _APNG_FILENAME
-                save_apng(ordered, ordered_durations, apng_path)
-                result.written_files.append(apng_path)
-
-            if options.write_webp:
-                webp_path = output_directory / _WEBP_FILENAME
-                save_webp(ordered, ordered_durations, webp_path)
-                result.written_files.append(webp_path)
+            # Normalize once; the savers' own normalization pass then
+            # reuses these frames instead of re-converting per format.
+            frames = normalize_canvas(ordered)
+            for filename, saver in animation_outputs:
+                animation_path = output_directory / filename
+                saver(frames, ordered_durations, animation_path)
+                result.written_files.append(animation_path)
 
     if options.write_metadata:
         metadata_path = output_directory / _METADATA_FILENAME

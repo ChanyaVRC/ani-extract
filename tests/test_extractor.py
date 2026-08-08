@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from ani_extract.extractor import ExtractOptions, extract
@@ -114,6 +115,11 @@ def test_disable_outputs(ani_path: Path, tmp_path: Path) -> None:
     )
 
     assert list(output.iterdir()) == []
+
+
+def test_extract_options_is_keyword_only() -> None:
+    with pytest.raises(TypeError):
+        ExtractOptions(False)
 
 
 def test_broken_frame_produces_warning(tmp_path: Path) -> None:

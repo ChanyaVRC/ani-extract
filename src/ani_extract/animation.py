@@ -16,7 +16,12 @@ __all__ = ["normalize_canvas", "save_apng", "save_gif", "save_webp"]
 
 _TRANSPARENT_INDEX = 255
 
-#: ANMF frame duration is a 24-bit field (WebP container specification).
+#: Frame-duration ceilings imposed by each container format: GIF stores
+#: uint16 centiseconds, APNG at best uint16 whole seconds (fcTL delay
+#: fraction), and the WebP ANMF duration is a 24-bit millisecond field.
+#: Larger values make Pillow raise (struct.error / ValueError) mid-write.
+_GIF_MAX_DURATION_MS = 655_350
+_APNG_MAX_DURATION_MS = 65_535_000
 _WEBP_MAX_DURATION_MS = 0xFFFFFF
 
 _VP8X_HAS_ANIMATION = 0x02
@@ -39,7 +44,7 @@ def normalize_canvas(images: list[Image.Image]) -> list[Image.Image]:
     normalized: list[Image.Image] = []
     for image in images:
         if image.size == (width, height):
-            normalized.append(image.convert("RGBA"))
+            normalized.append(image if image.mode == "RGBA" else image.convert("RGBA"))
             continue
         canvas = PillowImage.new("RGBA", (width, height), (0, 0, 0, 0))
         canvas.paste(image.convert("RGBA"), (0, 0))
@@ -61,20 +66,44 @@ def _to_palette_frame(image: Image.Image) -> Image.Image:
     return palette_image
 
 
-def save_gif(images: list[Image.Image], durations_ms: list[int], path: Path) -> None:
-    """Write an animated GIF."""
+def _prepare_frames(images: list[Image.Image], durations_ms: list[int]) -> list[Image.Image]:
     if not images:
         raise ValueError("No frames to write.")
+    if len(durations_ms) != len(images):
+        raise ValueError(f"Expected {len(images)} durations, got {len(durations_ms)}.")
+    return normalize_canvas(images)
 
-    frames = [_to_palette_frame(image) for image in normalize_canvas(images)]
 
+def _clamp_durations(durations_ms: list[int], maximum: int) -> list[int]:
+    return [min(max(int(duration), 0), maximum) for duration in durations_ms]
+
+
+def _save_pillow_animation(
+    frames: list[Image.Image],
+    durations_ms: list[int],
+    path: Path,
+    image_format: str,
+    **options: object,
+) -> None:
     frames[0].save(
         path,
-        format="GIF",
+        format=image_format,
         save_all=True,
         append_images=frames[1:],
-        duration=list(durations_ms),
+        duration=durations_ms,
         loop=0,
+        **options,
+    )
+
+
+def save_gif(images: list[Image.Image], durations_ms: list[int], path: Path) -> None:
+    """Write an animated GIF."""
+    frames = [_to_palette_frame(image) for image in _prepare_frames(images, durations_ms)]
+    _save_pillow_animation(
+        frames,
+        _clamp_durations(durations_ms, _GIF_MAX_DURATION_MS),
+        path,
+        "GIF",
         disposal=2,
         transparency=_TRANSPARENT_INDEX,
         optimize=False,
@@ -83,18 +112,12 @@ def save_gif(images: list[Image.Image], durations_ms: list[int], path: Path) -> 
 
 def save_apng(images: list[Image.Image], durations_ms: list[int], path: Path) -> None:
     """Write an animated PNG (APNG)."""
-    if not images:
-        raise ValueError("No frames to write.")
-
-    frames = normalize_canvas(images)
-
-    frames[0].save(
+    frames = _prepare_frames(images, durations_ms)
+    _save_pillow_animation(
+        frames,
+        _clamp_durations(durations_ms, _APNG_MAX_DURATION_MS),
         path,
-        format="PNG",
-        save_all=True,
-        append_images=frames[1:],
-        duration=list(durations_ms),
-        loop=0,
+        "PNG",
         disposal=1,
     )
 
@@ -138,13 +161,7 @@ def save_webp(images: list[Image.Image], durations_ms: list[int], path: Path) ->
     if not features.check("webp"):
         raise ValueError("Pillow was built without WebP support.")
 
-    if not images:
-        raise ValueError("No frames to write.")
-
-    if len(durations_ms) != len(images):
-        raise ValueError(f"Expected {len(images)} durations, got {len(durations_ms)}.")
-
-    frames = normalize_canvas(images)
+    frames = _prepare_frames(images, durations_ms)
     width, height = frames[0].size
 
     has_alpha = any(frame.getextrema()[3][0] < 255 for frame in frames)
@@ -156,14 +173,14 @@ def save_webp(images: list[Image.Image], durations_ms: list[int], path: Path) ->
     )
     body += _webp_chunk(b"ANIM", struct.pack("<IH", 0, 0))
 
-    for frame, duration in zip(frames, durations_ms, strict=True):
-        clamped = min(max(int(duration), 0), _WEBP_MAX_DURATION_MS)
+    durations = _clamp_durations(durations_ms, _WEBP_MAX_DURATION_MS)
+    for frame, duration in zip(frames, durations, strict=True):
         header = (
             _uint24(0)  # frame X / 2
             + _uint24(0)  # frame Y / 2
             + _uint24(width - 1)
             + _uint24(height - 1)
-            + _uint24(clamped)
+            + _uint24(duration)
             + struct.pack("<B", _ANMF_NO_BLEND)
         )
         body += _webp_chunk(b"ANMF", header + _encode_lossless_frame(frame))

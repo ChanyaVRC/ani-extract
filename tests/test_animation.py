@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from ani_extract.animation import save_webp
+from ani_extract.animation import save_apng, save_gif, save_webp
 
 
 def _frame(color: tuple[int, int, int, int], size: tuple[int, int] = (8, 8)) -> Image.Image:
@@ -71,11 +71,37 @@ def test_webp_single_frame_keeps_pixels(tmp_path: Path) -> None:
         assert image.convert("RGBA").getpixel((0, 0)) == (1, 2, 3, 255)
 
 
-def test_webp_mismatched_durations_raise(tmp_path: Path) -> None:
-    with pytest.raises(ValueError):
-        save_webp([_frame((255, 0, 0, 255)), _frame((0, 0, 255, 255))], [100], tmp_path / "a.webp")
+def test_gif_clamps_oversized_durations(tmp_path: Path) -> None:
+    path = tmp_path / "animation.gif"
+
+    save_gif([_frame((255, 0, 0, 255)), _frame((0, 0, 255, 255))], [10**7, 100], path)
+
+    with Image.open(path) as image:
+        image.seek(0)
+        image.load()
+        assert image.info["duration"] == 655_350
 
 
-def test_webp_empty_frames_raise(tmp_path: Path) -> None:
+def test_apng_clamps_oversized_durations(tmp_path: Path) -> None:
+    path = tmp_path / "animation.png"
+
+    save_apng([_frame((255, 0, 0, 255)), _frame((0, 0, 255, 255))], [10**11, 100], path)
+
+    with Image.open(path) as image:
+        image.seek(0)
+        image.load()
+        assert image.info["duration"] == 65_535_000
+
+
+@pytest.mark.parametrize("saver", [save_gif, save_apng, save_webp])
+def test_mismatched_durations_raise(saver, tmp_path: Path) -> None:
+    frames = [_frame((255, 0, 0, 255)), _frame((0, 0, 255, 255))]
+
     with pytest.raises(ValueError):
-        save_webp([], [], tmp_path / "a.webp")
+        saver(frames, [100], tmp_path / "animation.out")
+
+
+@pytest.mark.parametrize("saver", [save_gif, save_apng, save_webp])
+def test_empty_frames_raise(saver, tmp_path: Path) -> None:
+    with pytest.raises(ValueError):
+        saver([], [], tmp_path / "animation.out")
