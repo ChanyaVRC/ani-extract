@@ -19,12 +19,13 @@ def test_default_output_directory(ani_path: Path, capsys: pytest.CaptureFixture[
 
 def test_output_option(ani_path: Path, tmp_path: Path) -> None:
     output = tmp_path / "custom"
-    exit_code = main([str(ani_path), "-o", str(output), "--all-sizes", "--gif", "--apng"])
+    exit_code = main([str(ani_path), "-o", str(output), "--all-sizes", "--gif", "--apng", "--webp"])
 
     assert exit_code == 0
     assert (output / "frame_000@16x16-32bpp.png").is_file()
     assert (output / "animation.gif").is_file()
     assert (output / "animation.png").is_file()
+    assert (output / "animation.webp").is_file()
 
 
 def test_multiple_sources_use_subdirectories(tmp_path: Path) -> None:

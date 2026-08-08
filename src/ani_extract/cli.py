@@ -57,6 +57,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--gif", action="store_true", help="write an animated GIF")
     parser.add_argument("--apng", action="store_true", help="write an animated PNG (APNG)")
+    parser.add_argument("--webp", action="store_true", help="write an animated WebP")
     parser.add_argument("--no-raw", action="store_true", help="do not write the original CUR/ICO")
     parser.add_argument("--no-png", action="store_true", help="do not write representative PNGs")
     parser.add_argument("--no-metadata", action="store_true", help="do not write metadata.json")
@@ -121,6 +122,7 @@ def main(argv: list[str] | None = None) -> int:
         write_sequence=args.sequence,
         write_gif=args.gif,
         write_apng=args.apng,
+        write_webp=args.webp,
         write_metadata=not args.no_metadata,
     )
 

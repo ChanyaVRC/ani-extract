@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .ani import AniFile, parse_ani
-from .animation import save_apng, save_gif
+from .animation import save_apng, save_gif, save_webp
 from .icons import IconContainer, IconError, open_entry, parse_icon_container
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -19,6 +19,7 @@ __all__ = ["ExtractOptions", "ExtractResult", "extract"]
 _METADATA_FILENAME = "metadata.json"
 _GIF_FILENAME = "animation.gif"
 _APNG_FILENAME = "animation.png"
+_WEBP_FILENAME = "animation.webp"
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,7 @@ class ExtractOptions:
     write_sequence: bool = False
     write_gif: bool = False
     write_apng: bool = False
+    write_webp: bool = False
     write_metadata: bool = True
 
 
@@ -189,7 +191,7 @@ def extract(source: Path, output_directory: Path, options: ExtractOptions) -> Ex
             result.written_files.append(step_path)
             result.png_count += 1
 
-    if options.write_gif or options.write_apng:
+    if options.write_gif or options.write_apng or options.write_webp:
         if not ordered:
             result.warnings.append("No frames usable for animation.")
         else:
@@ -202,6 +204,11 @@ def extract(source: Path, output_directory: Path, options: ExtractOptions) -> Ex
                 apng_path = output_directory / _APNG_FILENAME
                 save_apng(ordered, ordered_durations, apng_path)
                 result.written_files.append(apng_path)
+
+            if options.write_webp:
+                webp_path = output_directory / _WEBP_FILENAME
+                save_webp(ordered, ordered_durations, webp_path)
+                result.written_files.append(webp_path)
 
     if options.write_metadata:
         metadata_path = output_directory / _METADATA_FILENAME

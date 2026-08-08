@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:  # pragma: no cover
     from PIL import Image
 
-__all__ = ["normalize_canvas", "save_apng", "save_gif"]
+__all__ = ["normalize_canvas", "save_apng", "save_gif", "save_webp"]
 
 _TRANSPARENT_INDEX = 255
 
@@ -83,4 +83,22 @@ def save_apng(images: list[Image.Image], durations_ms: list[int], path: Path) ->
         duration=list(durations_ms),
         loop=0,
         disposal=1,
+    )
+
+
+def save_webp(images: list[Image.Image], durations_ms: list[int], path: Path) -> None:
+    """Write an animated WebP."""
+    if not images:
+        raise ValueError("No frames to write.")
+
+    frames = normalize_canvas(images)
+
+    frames[0].save(
+        path,
+        format="WEBP",
+        save_all=True,
+        append_images=frames[1:],
+        duration=list(durations_ms),
+        loop=0,
+        lossless=True,
     )

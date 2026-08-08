@@ -77,6 +77,17 @@ def test_apng_is_written(ani_path: Path, tmp_path: Path) -> None:
         assert image.n_frames == 4
 
 
+def test_webp_is_written(ani_path: Path, tmp_path: Path) -> None:
+    output = tmp_path / "out"
+    extract(ani_path, output, ExtractOptions(write_webp=True))
+
+    webp_path = output / "animation.webp"
+    assert webp_path.is_file()
+
+    with Image.open(webp_path) as image:
+        assert image.n_frames == 4
+
+
 def test_metadata_contents(ani_path: Path, tmp_path: Path) -> None:
     output = tmp_path / "out"
     extract(ani_path, output, ExtractOptions())

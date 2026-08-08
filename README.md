@@ -13,7 +13,7 @@ images. Simply renaming the extension does not produce a usable image, but extra
 - Recursively scans `icon` chunks and extracts frames
 - Outputs both the original `.cur` / `.ico` files and PNGs
 - Expands **every resolution** contained in a single `.cur` / `.ico` into individual PNGs (`--all-sizes`)
-- Parses `anih` / `seq` / `rate` and writes **GIF / APNG files that respect playback order and frame durations**
+- Parses `anih` / `seq` / `rate` and writes **GIF / APNG / WebP files that respect playback order and frame durations**
 - Records the header, resolution list, hotspots, and playback duration in `metadata.json`
 
 ## Installation
@@ -79,6 +79,7 @@ uv run ani-extract sample.ani
 | `--sequence` | Write `step_000.png` … following the playback order of the `seq` chunk |
 | `--gif` | Write an animated GIF that respects playback order and durations |
 | `--apng` | Likewise write an animated PNG (APNG) |
+| `--webp` | Likewise write an animated WebP (lossless, full alpha) |
 | `--no-raw` | Do not write the original `.cur` / `.ico` files |
 | `--no-png` | Do not write the representative PNGs |
 | `--no-metadata` | Do not write `metadata.json` |
@@ -96,6 +97,7 @@ sample_frames/
 ├── frame_001.png
 ├── animation.gif
 ├── animation.png
+├── animation.webp
 └── metadata.json
 ```
 
@@ -127,7 +129,8 @@ print(result.png_count, result.warnings)
 - With the `seq` chunk, playback order can be something like `0 → 1 → 2 → 1` even when only three
   frames are stored. GIF / APNG output and `--sequence` follow this order.
 - GIF supports only a single transparent color, so semi-transparent anti-aliasing is lost.
-  Use `--apng` when fidelity matters.
+  Use `--apng` or `--webp` when fidelity matters; both keep the full alpha channel
+  (WebP output is lossless).
 - Files whose `anih` icon flag is not set (frames stored as raw DIBs) produce a warning.
 
 ## Development
