@@ -48,10 +48,10 @@ Specify the output directory:
 ani-extract sample.ani -o extracted
 ```
 
-Expand all resolutions and also write GIF and APNG:
+Expand all resolutions and also write GIF, APNG, and WebP:
 
 ```console
-ani-extract sample.ani -o extracted --all-sizes --gif --apng
+ani-extract sample.ani -o extracted --all-sizes --gif --apng --webp
 ```
 
 Process multiple files at once (creates a subdirectory per file under `-o`):
@@ -127,10 +127,11 @@ print(result.png_count, result.warnings)
 - The time unit is the jiffy (1/60 second). When there is no `rate` chunk, the default rate
   from `anih` is used.
 - With the `seq` chunk, playback order can be something like `0 → 1 → 2 → 1` even when only three
-  frames are stored. GIF / APNG output and `--sequence` follow this order.
+  frames are stored. GIF / APNG / WebP output and `--sequence` follow this order.
 - GIF supports only a single transparent color, so semi-transparent anti-aliasing is lost.
-  Use `--apng` or `--webp` when fidelity matters; both keep the full alpha channel
-  (WebP output is lossless).
+  Use `--apng` or `--webp` when fidelity matters; both keep the full alpha channel.
+- WebP output is exact lossless: even the RGB values of fully transparent pixels are
+  preserved, and each playback step becomes its own frame (no frame merging).
 - Files whose `anih` icon flag is not set (frames stored as raw DIBs) produce a warning.
 
 ## Development

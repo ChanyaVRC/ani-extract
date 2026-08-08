@@ -26,7 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Examples:\n"
             "  ani-extract sample.ani\n"
             "  ani-extract sample.ani -o out --all-sizes\n"
-            "  ani-extract *.ani -o out --gif --apng\n"
+            "  ani-extract *.ani -o out --gif --apng --webp\n"
         ),
     )
 
